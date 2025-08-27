@@ -56,7 +56,13 @@
   </div>
 
   <script>
-    const ws = new WebSocket('ws://localhost:8000');
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${protocol}://${window.location.host}`);
+
+    ws.onopen = () => console.log('WebSocket connected');
+    ws.onclose = () => console.log('WebSocket closed');
+    ws.onerror = (err) => console.error('WebSocket error', err);
+    
     const botList = document.getElementById('botList');
     const commandBot = document.getElementById('commandBot');
     const statusLog = document.getElementById('statusLog');
