@@ -5,7 +5,9 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const server = app.listen(8000, () => console.log('Server running on http://localhost:8000'));
+const PORT = process.env.PORT || 8000;
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
