@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 8001;
+const PORT = process.env.PORT || 8000;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const wss = new WebSocket.Server({ server });
