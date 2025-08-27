@@ -73,6 +73,22 @@ function createBot(botConfig) {
     broadcast({ type: 'status', username: bot.username, status: `packet error: ${err.message}` });
   });
 
+  // 🔥 Botni doimiy qayta ulash mexanizmi
+  const reconnectInterval = setInterval(() => {
+    if (bots.has(botConfig.username)) {
+      broadcast({ type: 'status', username: bot.username, status: 'reconnecting...' });
+      bot.quit('Reconnecting...');
+      bots.delete(botConfig.username);
+
+      setTimeout(() => {
+        createBot(botConfig); // qayta yaratish
+      }, 5000); // 5 soniyadan keyin qayta ulanish
+    }
+  }, 10 * 60 * 1); // har 10 daqiqada qayta ulanish
+
+  // agar bot o‘chirilsa, intervalni ham tozalaymiz
+  bot.on('end', () => clearInterval(reconnectInterval));
+
   return bot;
 }
 
