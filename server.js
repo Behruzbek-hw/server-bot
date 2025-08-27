@@ -84,7 +84,7 @@ function createBot(botConfig) {
         createBot(botConfig); // qayta yaratish
       }, 5000); // 5 soniyadan keyin qayta ulanish
     }
-  }, 10 * 60 * 1); // har 10 daqiqada qayta ulanish
+  }, 10 * 60 * 100); // har 10 daqiqada qayta ulanish
 
   // agar bot o‘chirilsa, intervalni ham tozalaymiz
   bot.on('end', () => clearInterval(reconnectInterval));
