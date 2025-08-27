@@ -3,11 +3,5 @@
     "host": "5.9.41.143",
     "port": 29348
   },
-  "bots": [
-    {
-      "username": "22",
-      "password": "",
-      "commands": []
-    }
-  ]
+  "bots": []
 }
