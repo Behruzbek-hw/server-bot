@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Bot Control</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
+    <h1 class="text-2xl font-bold mb-4 text-center">Minecraft Bot Control</h1>
+    
+    <!-- Server Config -->
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold mb-2">Server Settings</h2>
+      <div class="grid grid-cols-2 gap-4">
+        <input id="serverHost" type="text" placeholder="Server IP" class="border p-2 rounded" value="localhost">
+        <input id="serverPort" type="number" placeholder="Port" class="border p-2 rounded" value="25565">
+      </div>
+      <button onclick="updateServer()" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Update Server</button>
+    </div>
+    
+    <!-- Add Bot -->
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold mb-2">Add Bot</h2>
+      <div class="grid grid-cols-2 gap-4">
+        <input id="botUsername" type="text" placeholder="Username" class="border p-2 rounded">
+        <input id="botPassword" type="text" placeholder="Password (optional)" class="border p-2 rounded">
+      </div>
+      <button onclick="addBot()" class="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Add Bot</button>
+    </div>
+    
+    <!-- Bot List -->
+    <div>
+      <h2 class="text-lg font-semibold mb-2">Bots</h2>
+      <ul id="botList" class="space-y-2"></ul>
+    </div>
+    
+    <!-- Command Input -->
+    <div class="mt-6">
+      <h2 class="text-lg font-semibold mb-2">Send Command</h2>
+      <div class="flex gap-4">
+        <select id="commandBot" class="border p-2 rounded">
+          <option value="">Select Bot</option>
+        </select>
+        <input id="commandInput" type="text" placeholder="/say Hello" class="border p-2 rounded flex-1">
+        <button onclick="sendCommand()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Send</button>
+      </div>
+    </div>
+    
+    <!-- Status Log -->
+    <div class="mt-6">
+      <h2 class="text-lg font-semibold mb-2">Status Log</h2>
+      <div id="statusLog" class="bg-gray-100 p-4 rounded h-40 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <script>
+    const ws = new WebSocket('ws://localhost:8000');
+    const botList = document.getElementById('botList');
+    const commandBot = document.getElementById('commandBot');
+    const statusLog = document.getElementById('statusLog');
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'config') {
+        document.getElementById('serverHost').value = data.config.server.host;
+        document.getElementById('serverPort').value = data.config.server.port;
+      } else if (data.type === 'bots') {
+        botList.innerHTML = '';
+        commandBot.innerHTML = '<option value="">Select Bot</option>';
+        data.bots.forEach(bot => {
+          const li = document.createElement('li');
+          li.className = 'flex justify-between items-center p-2 bg-gray-200 rounded';
+          li.innerHTML = `<span>${bot}</span><button onclick="removeBot('${bot}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Remove</button>`;
+          botList.appendChild(li);
+          const option = document.createElement('option');
+          option.value = bot;
+          option.textContent = bot;
+          commandBot.appendChild(option);
+        });
+      } else if (data.type === 'status') {
+        const log = document.createElement('div');
+        log.textContent = `[${new Date().toLocaleTimeString()}] ${data.username}: ${data.status}`;
+        statusLog.appendChild(log);
+        statusLog.scrollTop = statusLog.scrollHeight;
+      } else if (data.type === 'error') {
+        alert(data.message);
+      }
+    };
+
+    function addBot() {
+      const username = document.getElementById('botUsername').value;
+      const password = document.getElementById('botPassword').value;
+      if (username) {
+        ws.send(JSON.stringify({ type: 'addBot', username, password }));
+        document.getElementById('botUsername').value = '';
+        document.getElementById('botPassword').value = '';
+      } else {
+        alert('Username is required');
+      }
+    }
+
+    function removeBot(username) {
+      ws.send(JSON.stringify({ type: 'removeBot', username }));
+    }
+
+    function sendCommand() {
+      const username = document.getElementById('commandBot').value;
+      const command = document.getElementById('commandInput').value;
+      if (username && command) {
+        ws.send(JSON.stringify({ type: 'sendCommand', username, command }));
+        document.getElementById('commandInput').value = '';
+      } else {
+        alert('Select a bot and enter a command');
+      }
+    }
+
+    function updateServer() {
+      const host = document.getElementById('serverHost').value;
+      const port = parseInt(document.getElementById('serverPort').value);
+      if (host && port) {
+        ws.send(JSON.stringify({ type: 'updateServer', host, port }));
+      } else {
+        alert('Enter valid server host and port');
+      }
+    }
+  </script>
+</body>
+</html>
