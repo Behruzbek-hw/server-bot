@@ -1,14 +1,13 @@
 {
-  "name": "minecraft-bot-ui",
+  "name": "minecraft-bot",
   "version": "1.0.0",
-  "description": "Minecraft bot with UI using Mineflayer",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "mineflayer": "^4.10.0",
-    "ws": "^8.13.0"
+    "express": "^4.17.1",
+    "mineflayer": "^4.0.0",
+    "ws": "^8.0.0"
   }
 }
