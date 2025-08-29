@@ -19,16 +19,29 @@ app.use(express.json());
 let config = { bots: [] };
 const bots = new Map();
 
+const configPath = path.join(__dirname, 'config.json');
+
 try {
-  const data = fs.readFileSync('config.json', 'utf8');
-  config = JSON.parse(data);
+  if (fs.existsSync(configPath)) {
+    const data = fs.readFileSync(configPath, 'utf8');
+    if (data.trim()) {
+      config = JSON.parse(data);
+    } else {
+      console.log('config.json is empty, using default config.');
+    }
+  } else {
+    console.log('config.json does not exist, creating new one.');
+    saveConfig();
+  }
 } catch (err) {
   console.error('Error reading config.json, using default config:', err);
+  saveConfig();
 }
 
 function saveConfig() {
   try {
-    fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log('Config saved successfully.');
   } catch (err) {
     console.error('Error writing to config.json:', err);
   }
@@ -109,6 +122,22 @@ function createBot(botConfig) {
   return bot;
 }
 
+function stopBot(username) {
+  const bot = bots.get(username);
+  if (bot) {
+    // Reloginni o'chirish
+    const botConfig = config.bots.find(b => b.username === username);
+    if (botConfig) {
+      botConfig.reloginInterval = 0; // Reloginni o'chirish
+      saveConfig();
+    }
+    bot.quit();
+    bots.delete(username);
+    broadcast({ type: 'status', username, status: 'stopped' });
+    broadcast({ type: 'bots', bots: config.bots });
+  }
+}
+
 function broadcast(message) {
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
@@ -151,8 +180,10 @@ wss.on('connection', ws => {
       const bot = bots.get(data.username);
       if (bot) {
         bot.chat(data.command);
-        broadcast({ type: 'status', username: bot.username, status: `sent command: ${data.command}` });
+        broadcast({ type: 'status', username: data.username, status: `sent command: ${data.command}` });
       }
+    } else if (data.type === 'stopBot') {
+      stopBot(data.username);
     }
   });
 });
