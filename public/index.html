@@ -7,7 +7,7 @@
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
     .section { margin-bottom: 20px; }
-    label { display: block; margin-bottom: 5px; }
+    label { display: block; margin-bottom: 5ilyl; }
     input, select, button { margin-bottom: 10px; padding: 5px; }
     #statusLog { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; }
   </style>
@@ -50,55 +50,68 @@
   </div>
 
   <script>
-    // WebSocket ulanishini dinamik ravishda aniqlash (HTTPS uchun wss://)
+    // WebSocket ulanishini dinamik ravishda aniqlash
     const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const ws = new WebSocket(`${protocol}${window.location.host}`);
-    
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-    };
+    let ws;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'bots') {
-        const botList = document.getElementById('botList');
-        const botSelect = document.getElementById('botSelect');
-        botList.innerHTML = '';
-        botSelect.innerHTML = '';
-        data.bots.forEach(bot => {
-          const li = document.createElement('li');
-          li.textContent = `${bot.username} (${bot.server.host}:${bot.server.port}) `;
-          const removeBtn = document.createElement('button');
-          removeBtn.textContent = 'Remove';
-          removeBtn.onclick = () => removeBot(bot.username);
-          li.appendChild(removeBtn);
-          botList.appendChild(li);
-
-          const option = document.createElement('option');
-          option.value = bot.username;
-          option.textContent = `${bot.username} (${bot.server.host}:${bot.server.port})`;
-          botSelect.appendChild(option);
-        });
-      } else if (data.type === 'status') {
+    function connectWebSocket() {
+      ws = new WebSocket(`${protocol}${window.location.host}`);
+      
+      ws.onopen = () => {
+        console.log('WebSocket connected');
         const log = document.getElementById('statusLog');
-        log.innerHTML += `<p>[${new Date().toLocaleString()}] ${data.username}: ${data.status}</p>`;
-        log.scrollTop = log.scrollHeight;
-      } else if (data.type === 'error') {
-        alert(data.message);
-      }
-    };
+        log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket connected</p>`;
+      };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      const log = document.getElementById('statusLog');
-      log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket error: ${error.message || 'Connection failed'}</p>`;
-    };
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'bots') {
+          const botList = document.getElementById('botList');
+          const botSelect = document.getElementById('botSelect');
+          botList.innerHTML = '';
+          botSelect.innerHTML = '';
+          data.bots.forEach(bot => {
+            const li = document.createElement('li');
+            li.textContent = `${bot.username} (${bot.server.host}:${bot.server.port}) `;
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = 'Remove';
+            removeBtn.onclick = () => removeBot(bot.username);
+            li.appendChild(removeBtn);
+            botList.appendChild(li);
 
-    ws.onclose = () => {
-      console.log('WebSocket closed');
-      const log = document.getElementById('statusLog');
-      log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket connection closed</p>`;
-    };
+            const option = document.createElement('option');
+            option.value = bot.username;
+            option.textContent = `${bot.username} (${bot.server.host}:${bot.server.port})`;
+            botSelect.appendChild(option);
+          });
+        } else if (data.type === 'status') {
+          const log = document.getElementById('statusLog');
+          log.innerHTML += `<p>[${new Date().toLocaleString()}] ${data.username}: ${data.status}</p>`;
+          log.scrollTop = log.scrollHeight;
+        } else if (data.type === 'error') {
+          alert(data.message);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        const log = document.getElementById('statusLog');
+        log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket error: ${error.message || 'Connection failed'}</p>`;
+        // 5 soniyadan keyin qayta ulanishga urinish
+        setTimeout(connectWebSocket, 5000);
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket closed');
+        const log = document.getElementById('statusLog');
+        log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket connection closed. Reconnecting...</p>`;
+        // 5 soniyadan keyin qayta ulanishga urinish
+        setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    // Ilova boshlanganda WebSocket ulanishini boshlash
+    connectWebSocket();
 
     function addBot() {
       if (!ws || ws.readyState !== WebSocket.OPEN) {
