@@ -16,20 +16,15 @@
   <h1>Minecraft Bot Control</h1>
 
   <div class="section">
-    <h2>Server Settings</h2>
-    <label for="serverHost">Server Host:</label>
-    <input type="text" id="serverHost" placeholder="Server IP or hostname">
-    <label for="serverPort">Server Port:</label>
-    <input type="number" id="serverPort" placeholder="Server Port">
-    <button onclick="updateServer()">Update Server</button>
-  </div>
-
-  <div class="section">
     <h2>Add Bot</h2>
     <label for="botUsername">Bot Username:</label>
     <input type="text" id="botUsername" placeholder="Bot Username">
     <label for="botPassword">Bot Password (optional):</label>
     <input type="text" id="botPassword" placeholder="Bot Password">
+    <label for="serverHost">Server Host:</label>
+    <input type="text" id="serverHost" placeholder="Server IP or hostname">
+    <label for="serverPort">Server Port:</label>
+    <input type="number" id="serverPort" placeholder="Server Port" value="25565">
     <label for="reloginInterval">Relogin Interval (minutes, 0 to disable):</label>
     <input type="number" id="reloginInterval" placeholder="Relogin interval" min="0">
     <button onclick="addBot()">Add Bot</button>
@@ -63,26 +58,23 @@
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === 'config') {
-        document.getElementById('serverHost').value = data.config.server.host;
-        document.getElementById('serverPort').value = data.config.server.port;
-      } else if (data.type === 'bots') {
+      if (data.type === 'bots') {
         const botList = document.getElementById('botList');
         const botSelect = document.getElementById('botSelect');
         botList.innerHTML = '';
         botSelect.innerHTML = '';
         data.bots.forEach(bot => {
           const li = document.createElement('li');
-          li.textContent = `${bot} `;
+          li.textContent = `${bot.username} (${bot.server.host}:${bot.server.port}) `;
           const removeBtn = document.createElement('button');
           removeBtn.textContent = 'Remove';
-          removeBtn.onclick = () => removeBot(bot);
+          removeBtn.onclick = () => removeBot(bot.username);
           li.appendChild(removeBtn);
           botList.appendChild(li);
 
           const option = document.createElement('option');
-          option.value = bot;
-          option.textContent = bot;
+          option.value = bot.username;
+          option.textContent = `${bot.username} (${bot.server.host}:${bot.server.port})`;
           botSelect.appendChild(option);
         });
       } else if (data.type === 'status') {
@@ -97,9 +89,19 @@
     function addBot() {
       const username = document.getElementById('botUsername').value;
       const password = document.getElementById('botPassword').value;
+      const serverHost = document.getElementById('serverHost').value;
+      const serverPort = parseInt(document.getElementById('serverPort').value) || 25565;
       const reloginInterval = parseInt(document.getElementById('reloginInterval').value) || 0;
-      if (username) {
-        ws.send(JSON.stringify({ type: 'addBot', username, password, reloginInterval }));
+      if (username && serverHost && serverPort) {
+        ws.send(JSON.stringify({ 
+          type: 'addBot', 
+          username, 
+          password, 
+          server: { host: serverHost, port: serverPort }, 
+          reloginInterval 
+        }));
+      } else {
+        alert('Please fill in username, server host, and port');
       }
     }
 
@@ -112,14 +114,6 @@
       const command = document.getElementById('command').value;
       if (username && command) {
         ws.send(JSON.stringify({ type: 'sendCommand', username, command }));
-      }
-    }
-
-    function updateServer() {
-      const host = document.getElementById('serverHost').value;
-      const port = parseInt(document.getElementById('serverPort').value);
-      if (host && port) {
-        ws.send(JSON.stringify({ type: 'updateServer', host, port }));
       }
     }
   </script>
