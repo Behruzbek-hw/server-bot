@@ -117,6 +117,7 @@
 
     .bot-list-section li button {
       background-color: #e04a4a;
+      margin-left: 10px;
     }
 
     .bot-list-section li button:hover {
@@ -125,7 +126,7 @@
 
     .command-section {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 1fr auto auto;
       gap: 20px;
       align-items: end;
     }
@@ -157,6 +158,14 @@
 
     .status-log::-webkit-scrollbar-thumb:hover {
       background: #357abd;
+    }
+
+    .stop-button {
+      background-color: #e04a4a;
+    }
+
+    .stop-button:hover {
+      background-color: #bd3535;
     }
 
     @media (max-width: 600px) {
@@ -223,6 +232,7 @@
         <input type="text" id="command" placeholder="Enter command">
       </div>
       <button onclick="sendCommand()">Send</button>
+      <button class="stop-button" onclick="stopBot()">Stop Bot</button>
     </div>
 
     <div class="section">
@@ -344,6 +354,19 @@
       const command = document.getElementById('command').value;
       if (username && command) {
         ws.send(JSON.stringify({ type: 'sendCommand', username, command }));
+      }
+    }
+
+    function stopBot() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('WebSocket is not connected. Please try again later.');
+        return;
+      }
+      const username = document.getElementById('botSelect').value;
+      if (username) {
+        ws.send(JSON.stringify({ type: 'stopBot', username }));
+      } else {
+        alert('Please select a bot to stop');
       }
     }
   </script>
