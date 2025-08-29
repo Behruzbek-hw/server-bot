@@ -1,6 +1,7 @@
 const mineflayer = require('mineflayer');
 const express = require('express');
 const WebSocket = require('ws');
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
@@ -12,33 +13,31 @@ const wss = new WebSocket.Server({ server });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Muhit o‘zgaruvchilaridan server sozlamalarini olish
-let config = {
-  server: {
-    host: process.env.MINECRAFT_HOST || 'localhost',
-    port: parseInt(process.env.MINECRAFT_PORT) || 25565
-  },
-  bots: []
-};
+let config = { bots: [] };
+const bots = new Map();
 
-// Agar muhit o‘zgaruvchilarida botlar ro‘yxati bo‘lsa, uni o‘qish
-if (process.env.BOTS) {
+try {
+  const data = fs.readFileSync('config.json', 'utf8');
+  config = JSON.parse(data);
+} catch (err) {
+  console.error('Error reading config.json, using default config:', err);
+}
+
+function saveConfig() {
   try {
-    config.bots = JSON.parse(process.env.BOTS);
+    fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
   } catch (err) {
-    console.error('Error parsing BOTS environment variable:', err);
+    console.error('Error writing to config.json:', err);
   }
 }
 
-const bots = new Map();
-
 function createBot(botConfig) {
   const options = {
-    host: config.server.host,
-    port: config.server.port,
+    host: botConfig.server.host,
+    port: botConfig.server.port,
     username: botConfig.username,
     password: botConfig.password || undefined,
-    version: '1.20.1' // Minecraft server versiyasi
+    version: '1.20.1'
   };
 
   const bot = mineflayer.createBot(options);
@@ -50,7 +49,6 @@ function createBot(botConfig) {
   bot.on('login', () => {
     broadcast({ type: 'status', username: bot.username, status: 'logged in' });
     
-    // Doimiy chiqib qayta kirish
     if (botConfig.reloginInterval && botConfig.reloginInterval > 0) {
       reloginTimer = setTimeout(() => {
         broadcast({ type: 'status', username: bot.username, status: 'Scheduled relogin' });
@@ -62,7 +60,6 @@ function createBot(botConfig) {
   bot.on('spawn', () => {
     broadcast({ type: 'status', username: bot.username, status: 'spawned' });
     
-    // Anti-AFK: Sakrash va tasodifiy harakat
     antiAfkInterval = setInterval(() => {
       if (bot.entity) {
         bot.setControlState('jump', true);
@@ -118,8 +115,7 @@ function broadcast(message) {
 }
 
 wss.on('connection', ws => {
-  ws.send(JSON.stringify({ type: 'config', config }));
-  ws.send(JSON.stringify({ type: 'bots', bots: Array.from(bots.keys()) }));
+  ws.send(JSON.stringify({ type: 'bots', bots: config.bots }));
 
   ws.on('message', message => {
     const data = JSON.parse(message);
@@ -132,31 +128,30 @@ wss.on('connection', ws => {
       const botConfig = { 
         username: data.username, 
         password: data.password, 
+        server: { host: data.server.host, port: data.server.port },
         commands: [], 
         reloginInterval: data.reloginInterval || 0
       };
       config.bots.push(botConfig);
+      saveConfig();
       createBot(botConfig);
-      broadcast({ type: 'bots', bots: Array.from(bots.keys()) });
+      broadcast({ type: 'bots', bots: config.bots });
     } else if (data.type === 'removeBot') {
       const bot = bots.get(data.username);
       if (bot) {
         bot.quit();
         config.bots = config.bots.filter(b => b.username !== data.username);
-        broadcast({ type: 'bots', bots: Array.from(bots.keys()) });
+        saveConfig();
+        broadcast({ type: 'bots', bots: config.bots });
       }
     } else if (data.type === 'sendCommand') {
-      const bot = bots narrative: {
+      const bot = bots.get(data.username);
+      if (bot) {
         bot.chat(data.command);
         broadcast({ type: 'status', username: bot.username, status: `sent command: ${data.command}` });
       }
-    } else if (data.type === 'updateServer') {
-      config.server.host = data.host;
-      config.server.port = data.port;
-      broadcast({ type: 'config', config });
     }
   });
 });
 
-// Initialize existing bots
 config.bots.forEach(createBot);
