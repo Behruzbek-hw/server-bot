@@ -50,7 +50,9 @@
   </div>
 
   <script>
-    const ws = new WebSocket(`ws://server-bot-umber.vercel.app`);
+    // WebSocket ulanishini dinamik ravishda aniqlash (HTTPS uchun wss://)
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const ws = new WebSocket(`${protocol}${window.location.host}`);
     
     ws.onopen = () => {
       console.log('WebSocket connected');
@@ -86,7 +88,23 @@
       }
     };
 
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      const log = document.getElementById('statusLog');
+      log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket error: ${error.message || 'Connection failed'}</p>`;
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket closed');
+      const log = document.getElementById('statusLog');
+      log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket connection closed</p>`;
+    };
+
     function addBot() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('WebSocket is not connected. Please try again later.');
+        return;
+      }
       const username = document.getElementById('botUsername').value;
       const password = document.getElementById('botPassword').value;
       const serverHost = document.getElementById('serverHost').value;
@@ -106,10 +124,18 @@
     }
 
     function removeBot(username) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('WebSocket is not connected. Please try again later.');
+        return;
+      }
       ws.send(JSON.stringify({ type: 'removeBot', username }));
     }
 
     function sendCommand() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('WebSocket is not connected. Please try again later.');
+        return;
+      }
       const username = document.getElementById('botSelect').value;
       const command = document.getElementById('command').value;
       if (username && command) {
