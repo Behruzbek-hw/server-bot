@@ -4,183 +4,248 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minecraft Bot Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    /* Dark Mode Minimalistic Style */
-body {
-  font-family: "Segoe UI", Arial, sans-serif;
-  background-color: #121212;
-  color: #e0e0e0;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  line-height: 1.6;
-}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-h1, h2 {
-  color: #ffffff;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #1e1e1e;
+      color: #e0e0e0;
+      padding: 20px;
+      line-height: 1.6;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
 
-.section {
-  background: #1e1e1e;
-  border: 1px solid #2c2c2c;
-  border-radius: 10px;
-  padding: 15px 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
+    .container {
+      max-width: 900px;
+      width: 100%;
+      display: grid;
+      gap: 20px;
+    }
 
-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: #bbbbbb;
-}
+    h1 {
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
 
-input, select, button {
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #2c2c2c;
-  background-color: #2a2a2a;
-  color: #f0f0f0;
-  font-size: 14px;
-  outline: none;
-  transition: 0.2s;
-}
+    .section {
+      background-color: #252525;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
 
-input:focus, select:focus {
-  border-color: #4a90e2;
-  background-color: #333333;
-}
+    .add-bot-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
 
-button {
-  background-color: #4a90e2;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.2s;
-}
+    .add-bot-section .full-width {
+      grid-column: span 2;
+    }
 
-button:hover {
-  background-color: #357ab8;
-}
+    .server-inputs {
+      display: grid;
+      grid-template-columns: 70% 30%;
+      gap: 10px;
+    }
 
-#statusLog {
-  background: #1a1a1a;
-  border: 1px solid #2c2c2c;
-  padding: 10px;
-  height: 200px;
-  overflow-y: auto;
-  border-radius: 8px;
-  font-family: monospace;
-  font-size: 13px;
-  color: #b0b0b0;
-}
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: #a0a0a0;
+    }
 
-#botList li {
-  margin-bottom: 8px;
-  padding: 8px;
-  background: #2a2a2a;
-  border-radius: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+    input, select {
+      width: 100%;
+      padding: 10px;
+      background-color: #2f2f2f;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+    }
 
-#botList button {
-  width: auto;
-  padding: 6px 12px;
-  background: #e74c3c;
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
+    input:focus, select:focus {
+      outline: none;
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+    }
 
-#botList button:hover {
-  background: #c0392b;
-}
+    button {
+      background-color: #4a90e2;
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
 
-.form-group {
-  margin-bottom: 15px;
-}
+    button:hover {
+      background-color: #357abd;
+    }
 
-.form-inline {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-}
+    .bot-list-section ul {
+      list-style: none;
+      padding: 0;
+    }
 
-.form-inline input, .form-inline select, .form-inline button {
-  flex: 1;
-}
+    .bot-list-section li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background-color: #2f2f2f;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
 
-.form-inline .btn-container {
-  flex: 0 0 auto;
-}
+    .bot-list-section li button {
+      background-color: #e04a4a;
+    }
 
+    .bot-list-section li button:hover {
+      background-color: #bd3535;
+    }
+
+    .command-section {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: end;
+    }
+
+    .status-log {
+      background-color: #2f2f2f;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      padding: 15px;
+      height: 250px;
+      overflow-y: auto;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.9rem;
+      color: #d0d0d0;
+    }
+
+    .status-log::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .status-log::-webkit-scrollbar-track {
+      background: #2f2f2f;
+    }
+
+    .status-log::-webkit-scrollbar-thumb {
+      background: #4a90e2;
+      border-radius: 4px;
+    }
+
+    .status-log::-webkit-scrollbar-thumb:hover {
+      background: #357abd;
+    }
+
+    @media (max-width: 600px) {
+      .add-bot-section {
+        grid-template-columns: 1fr;
+      }
+
+      .add-bot-section .full-width {
+        grid-column: span 1;
+      }
+
+      .server-inputs {
+        grid-template-columns: 1fr;
+      }
+
+      .command-section {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Minecraft 1 Bot Control</h1>
+  <div class="container">
+    <h1>Minecraft Bot Control</h1>
 
-  <div class="section">
-    <h2>Add Bot</h2>
-    <div class="form-group">
-      <label for="botUsername">Bot Username:</label>
-      <input type="text" id="botUsername" placeholder="Bot Username">
-    </div>
-
-    <div class="form-group">
-      <label for="botPassword">Bot Password (optional):</label>
-      <input type="text" id="botPassword" placeholder="Bot Password">
-    </div>
-
-    <div class="form-group">
-      <label for="serverAddress">Server Address (host:port):</label>
-      <input type="text" id="serverAddress" placeholder="example.com:25565">
-    </div>
-
-    <div class="form-inline">
+    <div class="section add-bot-section">
       <div>
-        <label for="reloginInterval">Relogin Interval (minutes, 0 = disable):</label>
-        <input type="number" id="reloginInterval" placeholder="0">
+        <label for="botUsername">Bot Username</label>
+        <input type="text" id="botUsername" placeholder="Bot Username">
       </div>
-      <div class="btn-container">
+      <div>
+        <label for="botPassword">Bot Password (optional)</label>
+        <input type="text" id="botPassword" placeholder="Bot Password">
+      </div>
+      <div class="full-width server-inputs">
+        <div>
+          <label for="serverHost">Server Host</label>
+          <input type="text" id="serverHost" placeholder="Server IP (e.g., 127.0.0.1)">
+        </div>
+        <div>
+          <label for="serverPort">Server Port</label>
+          <input type="number" id="serverPort" placeholder="Port (e.g., 25565)" value="25565">
+        </div>
+      </div>
+      <div>
+        <label for="reloginInterval">Relogin Interval (minutes, 0 to disable)</label>
+        <input type="number" id="reloginInterval" placeholder="Relogin interval" min="0">
+      </div>
+      <div>
         <button onclick="addBot()">Add Bot</button>
       </div>
     </div>
-  </div>
 
-  <div class="section">
-    <h2>Bots</h2>
-    <ul id="botList"></ul>
-  </div>
+    <div class="section bot-list-section">
+      <h2>Bots</h2>
+      <ul id="botList"></ul>
+    </div>
 
-  <div class="section">
-    <h2>Send Command</h2>
-    <div class="form-inline">
-      <select id="botSelect"></select>
-      <input type="text" id="command" placeholder="Enter command">
+    <div class="section command-section">
+      <div>
+        <label for="botSelect">Select Bot</label>
+        <select id="botSelect"></select>
+        <label for="command">Command</label>
+        <input type="text" id="command" placeholder="Enter command">
+      </div>
       <button onclick="sendCommand()">Send</button>
+    </div>
+
+    <div class="section">
+      <h2>Status Log</h2>
+      <div class="status-log" id="statusLog"></div>
     </div>
   </div>
 
-  <div class="section">
-    <h2>Status Log</h2>
-    <div id="statusLog"></div>
-  </div>
-
   <script>
-        // WebSocket ulanishini dinamik ravishda aniqlash
     const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
     let ws;
+
+    // Server Host inputni o'zgartirganda portni ajratish
+    document.getElementById('serverHost').addEventListener('input', function() {
+      const input = this.value;
+      const match = input.match(/^(.*?)(?::(\d+))?$/);
+      if (match) {
+        const host = match[1] || '';
+        const port = match[2] || '25565';
+        this.value = host.replace(/:$/, ''); // Birinchi inputda faqat IP qoladi, : o'chiriladi
+        document.getElementById('serverPort').value = port; // Port ikkinchi inputga o'tadi
+      }
+    });
 
     function connectWebSocket() {
       ws = new WebSocket(`${protocol}${window.location.host}`);
@@ -225,7 +290,6 @@ button:hover {
         console.error('WebSocket error:', error);
         const log = document.getElementById('statusLog');
         log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket error: ${error.message || 'Connection failed'}</p>`;
-        // 5 soniyadan keyin qayta ulanishga urinish
         setTimeout(connectWebSocket, 5000);
       };
 
@@ -233,12 +297,10 @@ button:hover {
         console.log('WebSocket closed');
         const log = document.getElementById('statusLog');
         log.innerHTML += `<p>[${new Date().toLocaleString()}] WebSocket connection closed. Reconnecting...</p>`;
-        // 5 soniyadan keyin qayta ulanishga urinish
         setTimeout(connectWebSocket, 5000);
       };
     }
 
-    // Ilova boshlanganda WebSocket ulanishini boshlash
     connectWebSocket();
 
     function addBot() {
@@ -251,6 +313,7 @@ button:hover {
       const serverHost = document.getElementById('serverHost').value;
       const serverPort = parseInt(document.getElementById('serverPort').value) || 25565;
       const reloginInterval = parseInt(document.getElementById('reloginInterval').value) || 0;
+
       if (username && serverHost && serverPort) {
         ws.send(JSON.stringify({ 
           type: 'addBot', 
@@ -260,7 +323,7 @@ button:hover {
           reloginInterval 
         }));
       } else {
-        alert('Please fill in username, server host, and port');
+        alert('Please fill in username and server host');
       }
     }
 
