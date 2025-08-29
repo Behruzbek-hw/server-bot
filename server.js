@@ -3,11 +3,15 @@ const express = require('express');
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+
+// Vercel HTTPS serverini sozlash uchun oddiy HTTPS server
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
+// WebSocket serverini HTTPS serveriga bog'lash
 const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
