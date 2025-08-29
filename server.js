@@ -18,7 +18,6 @@ app.use(express.json());
 
 let config = { bots: [] };
 const bots = new Map();
-
 const configPath = path.join(__dirname, 'config.json');
 
 try {
@@ -26,22 +25,24 @@ try {
     const data = fs.readFileSync(configPath, 'utf8');
     if (data.trim()) {
       config = JSON.parse(data);
+      console.log('Config loaded successfully:', config);
     } else {
-      console.log('config.json is empty, using default config.');
+      console.log('config.json is empty, initializing with default config.');
+      saveConfig();
     }
   } else {
     console.log('config.json does not exist, creating new one.');
     saveConfig();
   }
 } catch (err) {
-  console.error('Error reading config.json, using default config:', err);
+  console.error('Error reading config.json, initializing with default config:', err);
   saveConfig();
 }
 
 function saveConfig() {
   try {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log('Config saved successfully.');
+    console.log('Config saved successfully:', config);
   } catch (err) {
     console.error('Error writing to config.json:', err);
   }
@@ -107,8 +108,11 @@ function createBot(botConfig) {
     broadcast({ type: 'status', username: bot.username, status: 'disconnected' });
     bots.delete(bot.username);
     
-    if (botConfig.reloginInterval && botConfig.reloginInterval > 0) {
+    // Config'da bot hali mavjud bo'lsa va relogin yoqilgan bo'lsa, qayta ulanish
+    const botConfig = config.bots.find(b => b.username === bot.username);
+    if (botConfig && botConfig.reloginInterval && botConfig.reloginInterval > 0) {
       setTimeout(() => {
+        console.log(`Attempting to reconnect bot: ${bot.username}`);
         createBot(botConfig);
       }, 5000);
     }
@@ -125,7 +129,6 @@ function createBot(botConfig) {
 function stopBot(username) {
   const bot = bots.get(username);
   if (bot) {
-    // Reloginni o'chirish
     const botConfig = config.bots.find(b => b.username === username);
     if (botConfig) {
       botConfig.reloginInterval = 0; // Reloginni o'chirish
@@ -134,6 +137,17 @@ function stopBot(username) {
     bot.quit();
     bots.delete(username);
     broadcast({ type: 'status', username, status: 'stopped' });
+    broadcast({ type: 'bots', bots: config.bots });
+  }
+}
+
+function removeBot(username) {
+  const bot = bots.get(username);
+  if (bot) {
+    bot.quit();
+    config.bots = config.bots.filter(b => b.username !== username);
+    saveConfig();
+    bots.delete(username);
     broadcast({ type: 'bots', bots: config.bots });
   }
 }
@@ -147,45 +161,59 @@ function broadcast(message) {
 }
 
 wss.on('connection', ws => {
+  console.log('New WebSocket connection established');
   ws.send(JSON.stringify({ type: 'bots', bots: config.bots }));
 
   ws.on('message', message => {
-    const data = JSON.parse(message);
+    try {
+      const data = JSON.parse(message);
 
-    if (data.type === 'addBot') {
-      if (config.bots.length >= 10) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Maximum 10 bots allowed' }));
-        return;
-      }
-      const botConfig = { 
-        username: data.username, 
-        password: data.password, 
-        server: { host: data.server.host, port: data.server.port },
-        commands: [], 
-        reloginInterval: data.reloginInterval || 0
-      };
-      config.bots.push(botConfig);
-      saveConfig();
-      createBot(botConfig);
-      broadcast({ type: 'bots', bots: config.bots });
-    } else if (data.type === 'removeBot') {
-      const bot = bots.get(data.username);
-      if (bot) {
-        bot.quit();
-        config.bots = config.bots.filter(b => b.username !== data.username);
+      if (data.type === 'addBot') {
+        if (config.bots.length >= 10) {
+          ws.send(JSON.stringify({ type: 'error', message: 'Maximum 10 bots allowed' }));
+          return;
+        }
+        const botConfig = { 
+          username: data.username, 
+          password: data.password, 
+          server: { host: data.server.host, port: data.server.port },
+          commands: [], 
+          reloginInterval: data.reloginInterval || 0
+        };
+        // Botni config'ga qo'shish va saqlash
+        config.bots.push(botConfig);
         saveConfig();
+        createBot(botConfig);
         broadcast({ type: 'bots', bots: config.bots });
+      } else if (data.type === 'removeBot') {
+        removeBot(data.username);
+      } else if (data.type === 'sendCommand') {
+        const bot = bots.get(data.username);
+        if (bot) {
+          bot.chat(data.command);
+          broadcast({ type: 'status', username: data.username, status: `sent command: ${data.command}` });
+        }
+      } else if (data.type === 'stopBot') {
+        stopBot(data.username);
       }
-    } else if (data.type === 'sendCommand') {
-      const bot = bots.get(data.username);
-      if (bot) {
-        bot.chat(data.command);
-        broadcast({ type: 'status', username: data.username, status: `sent command: ${data.command}` });
-      }
-    } else if (data.type === 'stopBot') {
-      stopBot(data.username);
+    } catch (err) {
+      console.error('Error processing WebSocket message:', err);
     }
+  });
+
+  ws.on('close', () => {
+    console.log('WebSocket connection closed');
+    // Botlar faol qoladi, chunki ular WebSocket ulanishiga bog'liq emas
   });
 });
 
-config.bots.forEach(createBot);
+// Server ishga tushganda config.json'dagi barcha botlarni qayta ulash
+config.bots.forEach(botConfig => {
+  console.log(`Starting bot: ${botConfig.username}`);
+  createBot(botConfig);
+});
+
+// Serverni faol tutish uchun oddiy endpoint qo'shish
+app.get('/health', (req, res) => {
+  res.status(200).send('Server is running');
+});
