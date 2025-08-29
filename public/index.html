@@ -4,68 +4,62 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minecraft Bot Control</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .section { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; }
+    input, select, button { margin-bottom: 10px; padding: 5px; }
+    #statusLog { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-  <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
-    <h1 class="text-2xl font-bold mb-4 text-center">Minecraft Bot Control</h1>
-    
-    <!-- Server Config -->
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold mb-2">Server Settings</h2>
-      <div class="grid grid-cols-2 gap-4">
-        <input id="serverHost" type="text" placeholder="Server IP" class="border p-2 rounded" value="localhost">
-        <input id="serverPort" type="number" placeholder="Port" class="border p-2 rounded" value="25565">
-      </div>
-      <button onclick="updateServer()" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Update Server</button>
-    </div>
-    
-    <!-- Add Bot -->
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold mb-2">Add Bot</h2>
-      <div class="grid grid-cols-2 gap-4">
-        <input id="botUsername" type="text" placeholder="Username" class="border p-2 rounded">
-        <input id="botPassword" type="text" placeholder="Password (optional)" class="border p-2 rounded">
-      </div>
-      <button onclick="addBot()" class="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Add Bot</button>
-    </div>
-    
-    <!-- Bot List -->
-    <div>
-      <h2 class="text-lg font-semibold mb-2">Bots</h2>
-      <ul id="botList" class="space-y-2"></ul>
-    </div>
-    
-    <!-- Command Input -->
-    <div class="mt-6">
-      <h2 class="text-lg font-semibold mb-2">Send Command</h2>
-      <div class="flex gap-4">
-        <select id="commandBot" class="border p-2 rounded">
-          <option value="">Select Bot</option>
-        </select>
-        <input id="commandInput" type="text" placeholder="/say Hello" class="border p-2 rounded flex-1">
-        <button onclick="sendCommand()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Send</button>
-      </div>
-    </div>
-    
-    <!-- Status Log -->
-    <div class="mt-6">
-      <h2 class="text-lg font-semibold mb-2">Status Log</h2>
-      <div id="statusLog" class="bg-gray-100 p-4 rounded h-40 overflow-y-auto"></div>
-    </div>
+<body>
+  <h1>Minecraft Bot Control</h1>
+
+  <div class="section">
+    <h2>Server Settings</h2>
+    <label for="serverHost">Server Host:</label>
+    <input type="text" id="serverHost" placeholder="Server IP or hostname">
+    <label for="serverPort">Server Port:</label>
+    <input type="number" id="serverPort" placeholder="Server Port">
+    <button onclick="updateServer()">Update Server</button>
+  </div>
+
+  <div class="section">
+    <h2>Add Bot</h2>
+    <label for="botUsername">Bot Username:</label>
+    <input type="text" id="botUsername" placeholder="Bot Username">
+    <label for="botPassword">Bot Password (optional):</label>
+    <input type="text" id="botPassword" placeholder="Bot Password">
+    <label for="reloginInterval">Relogin Interval (minutes, 0 to disable):</label>
+    <input type="number" id="reloginInterval" placeholder="Relogin interval" min="0">
+    <button onclick="addBot()">Add Bot</button>
+  </div>
+
+  <div class="section">
+    <h2>Bots</h2>
+    <ul id="botList"></ul>
+  </div>
+
+  <div class="section">
+    <h2>Send Command</h2>
+    <label for="botSelect">Select Bot:</label>
+    <select id="botSelect"></select>
+    <label for="command">Command:</label>
+    <input type="text" id="command" placeholder="Enter command">
+    <button onclick="sendCommand()">Send</button>
+  </div>
+
+  <div class="section">
+    <h2>Status Log</h2>
+    <div id="statusLog"></div>
   </div>
 
   <script>
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket('wss://server-bot-oet0.onrender.com');
-
-    // ws.onopen = () => console.log('WebSocket connected');
-    // ws.onclose = () => console.log('WebSocket closed');
-    // ws.onerror = (err) => console.error('WebSocket error', err);
+    const ws = new WebSocket(`ws://${window.location.host}`);
     
-    const botList = document.getElementById('botList');
-    const commandBot = document.getElementById('commandBot');
-    const statusLog = document.getElementById('statusLog');
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+    };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -73,23 +67,28 @@
         document.getElementById('serverHost').value = data.config.server.host;
         document.getElementById('serverPort').value = data.config.server.port;
       } else if (data.type === 'bots') {
+        const botList = document.getElementById('botList');
+        const botSelect = document.getElementById('botSelect');
         botList.innerHTML = '';
-        commandBot.innerHTML = '<option value="">Select Bot</option>';
+        botSelect.innerHTML = '';
         data.bots.forEach(bot => {
           const li = document.createElement('li');
-          li.className = 'flex justify-between items-center p-2 bg-gray-200 rounded';
-          li.innerHTML = `<span>${bot}</span><button onclick="removeBot('${bot}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Remove</button>`;
+          li.textContent = `${bot} `;
+          const removeBtn = document.createElement('button');
+          removeBtn.textContent = 'Remove';
+          removeBtn.onclick = () => removeBot(bot);
+          li.appendChild(removeBtn);
           botList.appendChild(li);
+
           const option = document.createElement('option');
           option.value = bot;
           option.textContent = bot;
-          commandBot.appendChild(option);
+          botSelect.appendChild(option);
         });
       } else if (data.type === 'status') {
-        const log = document.createElement('div');
-        log.textContent = `[${new Date().toLocaleTimeString()}] ${data.username}: ${data.status}`;
-        statusLog.appendChild(log);
-        statusLog.scrollTop = statusLog.scrollHeight;
+        const log = document.getElementById('statusLog');
+        log.innerHTML += `<p>[${new Date().toLocaleString()}] ${data.username}: ${data.status}</p>`;
+        log.scrollTop = log.scrollHeight;
       } else if (data.type === 'error') {
         alert(data.message);
       }
@@ -98,12 +97,9 @@
     function addBot() {
       const username = document.getElementById('botUsername').value;
       const password = document.getElementById('botPassword').value;
+      const reloginInterval = parseInt(document.getElementById('reloginInterval').value) || 0;
       if (username) {
-        ws.send(JSON.stringify({ type: 'addBot', username, password }));
-        document.getElementById('botUsername').value = '';
-        document.getElementById('botPassword').value = '';
-      } else {
-        alert('Username is required');
+        ws.send(JSON.stringify({ type: 'addBot', username, password, reloginInterval }));
       }
     }
 
@@ -112,13 +108,10 @@
     }
 
     function sendCommand() {
-      const username = document.getElementById('commandBot').value;
-      const command = document.getElementById('commandInput').value;
+      const username = document.getElementById('botSelect').value;
+      const command = document.getElementById('command').value;
       if (username && command) {
         ws.send(JSON.stringify({ type: 'sendCommand', username, command }));
-        document.getElementById('commandInput').value = '';
-      } else {
-        alert('Select a bot and enter a command');
       }
     }
 
@@ -127,8 +120,6 @@
       const port = parseInt(document.getElementById('serverPort').value);
       if (host && port) {
         ws.send(JSON.stringify({ type: 'updateServer', host, port }));
-      } else {
-        alert('Enter valid server host and port');
       }
     }
   </script>
