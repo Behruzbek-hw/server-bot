@@ -71,7 +71,7 @@ function createBot(botConfig) {
     }
   });
 
-  bot.on'spawn', () => {
+  bot.on('spawn', () => {
     broadcast({ type: 'status', username: bot.username, status: 'spawned' });
     
     antiAfkInterval = setInterval(() => {
@@ -165,7 +165,7 @@ wss.on('connection', ws => {
       const data = JSON.parse(message);
 
       if (data.type === 'addBot') {
-        if (config.bots.length Phần tử đã được dịch từ tiếng Uzbek sang tiếng Việt: >= 10) {
+        if (config.bots.length >= 10) {
           ws.send(JSON.stringify({ type: 'error', message: 'Maximum 10 bots allowed' }));
           return;
         }
