@@ -1,7 +1,8 @@
 const mineflayer = require('mineflayer');
 const express = require('express');
 const WebSocket = require('ws');
-const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -9,67 +10,38 @@ const PORT = process.env.PORT || 8000;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const wss = new WebSocket.Server({ server });
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// MongoDB ulanish
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
-// Bot schema (model)
-const BotSchema = new mongoose.Schema({
-  username: { type: String, unique: true },
-  password: String,
-  server: {
-    host: String,
-    port: Number
-  },
-  reloginInterval: { type: Number, default: 0 }
-});
-
-const BotModel = mongoose.model('Bot', BotSchema);
-
+let config = { bots: [] };
 const bots = new Map();
+const configPath = path.join(__dirname, 'config.json');
 
-async function loadBots() {
-  try {
-    const botDocs = await BotModel.find();
-    botDocs.forEach(botConfig => {
-      console.log(`Starting bot: ${botConfig.username}`);
-      createBot(botConfig);
-    });
-    broadcast({ type: 'bots', bots: botDocs });
-  } catch (err) {
-    console.error('Error loading bots from DB:', err);
+try {
+  if (fs.existsSync(configPath)) {
+    const data = fs.readFileSync(configPath, 'utf8');
+    if (data.trim()) {
+      config = JSON.parse(data);
+      console.log('Config loaded successfully:', config);
+    } else {
+      console.log('config.json is empty, initializing with default config.');
+      saveConfig();
+    }
+  } else {
+    console.log('config.json does not exist, creating new one.');
+    saveConfig();
   }
+} catch (err) {
+  console.error('Error reading config.json, initializing with default config:', err);
+  saveConfig();
 }
 
-async function addBotToDB(botConfig) {
+function saveConfig() {
   try {
-    const newBot = new BotModel(botConfig);
-    await newBot.save();
-    console.log('Bot saved to DB:', botConfig.username);
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log('Config saved successfully:', config);
   } catch (err) {
-    console.error('Error saving bot to DB:', err);
-  }
-}
-
-async function removeBotFromDB(username) {
-  try {
-    await BotModel.deleteOne({ username });
-    console.log('Bot removed from DB:', username);
-  } catch (err) {
-    console.error('Error removing bot from DB:', err);
-  }
-}
-
-async function updateBotInDB(username, updates) {
-  try {
-    await BotModel.updateOne({ username }, updates);
-    console.log('Bot updated in DB:', username);
-  } catch (err) {
-    console.error('Error updating bot in DB:', err);
+    console.error('Error writing to config.json:', err);
   }
 }
 
@@ -99,7 +71,7 @@ function createBot(botConfig) {
     }
   });
 
-  bot.on('spawn', () => {
+  bot.on'spawn', () => {
     broadcast({ type: 'status', username: bot.username, status: 'spawned' });
     
     antiAfkInterval = setInterval(() => {
@@ -133,13 +105,13 @@ function createBot(botConfig) {
     broadcast({ type: 'status', username: bot.username, status: 'disconnected' });
     bots.delete(bot.username);
     
-    setTimeout(async () => {
-      const existingBot = await BotModel.findOne({ username: bot.username });
-      if (existingBot && existingBot.reloginInterval > 0) {
+    const botConfig = config.bots.find(b => b.username === bot.username);
+    if (botConfig && botConfig.reloginInterval && botConfig.reloginInterval > 0) {
+      setTimeout(() => {
         console.log(`Attempting to reconnect bot: ${bot.username}`);
-        createBot(existingBot);
-      }
-    }, 5000);
+        createBot(botConfig);
+      }, 5000);
+    }
   });
 
   bot.on('packetError', (err, packet) => {
@@ -150,26 +122,29 @@ function createBot(botConfig) {
   return bot;
 }
 
-async function stopBot(username) {
+function stopBot(username) {
   const bot = bots.get(username);
   if (bot) {
-    await updateBotInDB(username, { reloginInterval: 0 });
+    const botConfig = config.bots.find(b => b.username === username);
+    if (botConfig) {
+      botConfig.reloginInterval = 0;
+      saveConfig();
+    }
     bot.quit();
     bots.delete(username);
     broadcast({ type: 'status', username, status: 'stopped' });
-    const allBots = await BotModel.find();
-    broadcast({ type: 'bots', bots: allBots });
+    broadcast({ type: 'bots', bots: config.bots });
   }
 }
 
-async function removeBot(username) {
+function removeBot(username) {
   const bot = bots.get(username);
   if (bot) {
     bot.quit();
-    await removeBotFromDB(username);
+    config.bots = config.bots.filter(b => b.username !== username);
+    saveConfig();
     bots.delete(username);
-    const allBots = await BotModel.find();
-    broadcast({ type: 'bots', bots: allBots });
+    broadcast({ type: 'bots', bots: config.bots });
   }
 }
 
@@ -183,17 +158,14 @@ function broadcast(message) {
 
 wss.on('connection', ws => {
   console.log('New WebSocket connection established');
-  (async () => {
-    const allBots = await BotModel.find();
-    ws.send(JSON.stringify({ type: 'bots', bots: allBots }));
-  })();
+  ws.send(JSON.stringify({ type: 'bots', bots: config.bots }));
 
-  ws.on('message', async message => {
+  ws.on('message', message => {
     try {
       const data = JSON.parse(message);
 
       if (data.type === 'addBot') {
-        if (await BotModel.countDocuments() >= 10) {
+        if (config.bots.length Phần tử đã được dịch từ tiếng Uzbek sang tiếng Việt: >= 10) {
           ws.send(JSON.stringify({ type: 'error', message: 'Maximum 10 bots allowed' }));
           return;
         }
@@ -201,14 +173,15 @@ wss.on('connection', ws => {
           username: data.username, 
           password: data.password, 
           server: { host: data.server.host, port: data.server.port },
+          commands: [], 
           reloginInterval: data.reloginInterval || 0
         };
-        await addBotToDB(botConfig);
+        config.bots.push(botConfig);
+        saveConfig();
         createBot(botConfig);
-        const allBots = await BotModel.find();
-        broadcast({ type: 'bots', bots: allBots });
+        broadcast({ type: 'bots', bots: config.bots });
       } else if (data.type === 'removeBot') {
-        await removeBot(data.username);
+        removeBot(data.username);
       } else if (data.type === 'sendCommand') {
         const bot = bots.get(data.username);
         if (bot) {
@@ -216,7 +189,7 @@ wss.on('connection', ws => {
           broadcast({ type: 'status', username: data.username, status: `sent command: ${data.command}` });
         }
       } else if (data.type === 'stopBot') {
-        await stopBot(data.username);
+        stopBot(data.username);
       }
     } catch (err) {
       console.error('Error processing WebSocket message:', err);
@@ -228,16 +201,15 @@ wss.on('connection', ws => {
   });
 });
 
-mongoose.connection.once('open', () => {
-  loadBots();
+config.bots.forEach(botConfig => {
+  console.log(`Starting bot: ${botConfig.username}`);
+  createBot(botConfig);
 });
 
-// Serverni faol tutish uchun ping endpoint
 app.get('/ping', (req, res) => {
   res.status(200).send('Server is awake');
 });
 
-// Serverni faol tutish uchun health endpoint (eski)
 app.get('/health', (req, res) => {
   res.status(200).send('Server is running');
 });
